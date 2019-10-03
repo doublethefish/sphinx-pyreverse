@@ -36,6 +36,12 @@ class UMLGenerateDirective(Directive):
     # a list of modules which have been parsed by pyreverse
     generated_modules = []
 
+    option_spec = {'classes': directives.unchanged,
+                   'packages': directives.unchanged,
+                   'show-ancestors': directives.nonnegative_int,
+                   'show-associated': directives.nonnegative_int,
+                   }
+
     def run(self):
         doc = self.state.document
         env = doc.settings.env
@@ -44,6 +50,9 @@ class UMLGenerateDirective(Directive):
         # the directory of the file calling the directive
         self.src_dir = os.path.dirname(doc.current_source)
         self.uml_dir = os.path.abspath(os.path.join(self.base_dir, self.DIR_NAME))
+        #print("--- {}".format(self.arguments[0]))
+        #print("\tDIR_NAME {}".format(self.DIR_NAME))
+        #print("\toptions {}".format(self.options))
 
         if not os.path.exists(self.uml_dir):
             os.mkdir(self.uml_dir)
@@ -52,10 +61,21 @@ class UMLGenerateDirective(Directive):
         self.module_name = self.arguments[0]
 
         if self.module_name not in self.generated_modules:
-            print(call(['pyreverse', '-o', 'png', '-p', self.module_name, self.module_name], cwd=self.uml_dir))
+            cmd = ['pyreverse', '-o', 'png', '-p', self.module_name]
+            if 'show-ancestors' in self.options:
+                cmd.append("-a")
+                cmd.append(str(self.options['show-ancestors']))
+            if 'show-associated' in self.options:
+                cmd.append("-s")
+                cmd.append(str(self.options['show-associated']))
+            cmd.append(self.module_name)
+            #print("\tExecuting {}".format(" ".join(cmd)))
+            res = call(cmd, cwd=self.uml_dir)
+            #print("\tresult", res)
             # avoid double-generating
             self.generated_modules.append(self.module_name)
 
+        # print(self.arguments)
         valid_flags = {':classes:', ':packages:'}
         unkown_arguments = set(self.arguments[1:]) - valid_flags
         if unkown_arguments:
@@ -63,7 +83,7 @@ class UMLGenerateDirective(Directive):
                              .format(unkown_arguments, valid_flags))
 
         res = []
-        for arg in self.arguments[1:]:
+        for arg in flags:
             img_name = arg.strip(':')
             res.append(self.generate_img(img_name))
 
