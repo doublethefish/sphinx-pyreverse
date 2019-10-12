@@ -14,6 +14,8 @@ jobs:
       - run: 
           name: test
           command: scripts/runners/run_test.sh
+      - store_artifacts:
+          path: coverage
   test-python2:
     docker:
       - image: circleci/python:2
